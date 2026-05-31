@@ -1,0 +1,20 @@
+[package]
+name = "tng-backend"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "tng-backend"
+path = "src/main.rs"
+
+[dependencies]
+axum = { version = "0.7", features = ["multipart"] }
+tokio = { version = "1", features = ["full"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+s3 = { version = "0.35", default-features = false, features = ["tokio-native-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+tracing = "1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+bytes = "1"
