@@ -1,20 +1,20 @@
 [package]
-name = "tng-backend"
+name = "acts-of-care-poster-backend"
 version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "tng-backend"
+name = "acts-of-care-poster-backend"
 path = "src/main.rs"
 
 [dependencies]
-axum = { version = "0.7", features = ["multipart"] }
+axum = { version = "0.8.9", features = ["multipart"] }
 tokio = { version = "1", features = ["full"] }
-rusqlite = { version = "0.31", features = ["bundled"] }
-s3 = { version = "0.35", default-features = false, features = ["tokio-native-tls"] }
+rusqlite = { version = "0.30", features = ["bundled"] }
+minio = "0.4.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow = "1"
-tracing = "1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 bytes = "1"
+tracing = "0.1.44"

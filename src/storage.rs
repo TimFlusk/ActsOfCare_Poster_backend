@@ -1,10 +1,14 @@
 use anyhow::{Context, Result};
-use s3::{Bucket, Region, creds::Credentials};
+use minio::s3::MinioClient;
+use minio::s3::builders::ObjectContent;
+use minio::s3::creds::StaticProvider;
+use minio::s3::http::BaseUrl;
+use minio::s3::types::{ObjectKey, S3Api};
 
 const BUCKET_NAME: &str = "tng-images";
 
 pub struct MinioStorage {
-    bucket: Box<Bucket>,
+    client: MinioClient,
 }
 
 impl MinioStorage {
@@ -16,52 +20,60 @@ impl MinioStorage {
         let secret_key = std::env::var("MINIO_SECRET_KEY")
             .unwrap_or_else(|_| "minioadmin".to_string());
 
-        let region = Region::Custom {
-            region: "us-east-1".to_string(),
-            endpoint,
-        };
+        let base_url: BaseUrl = endpoint.parse()
+            .context("Invalid MINIO_ENDPOINT")?;
 
-        let credentials = Credentials::new(
-            Some(&access_key),
-            Some(&secret_key),
-            None,
-            None,
-            None,
-        )?;
+        let provider = StaticProvider::new(&access_key, &secret_key, None);
 
-        let bucket = Bucket::new(BUCKET_NAME, region, credentials)
-            .context("Failed to create bucket handle")?
-            .with_path_style(); // Required for MinIO
+        let client = MinioClient::new(base_url, Some(provider), None, None)
+            .context("Failed to create MinIO client")?;
 
-        tracing::info!("MinIO storage initialised, bucket: {}", BUCKET_NAME);
-        Ok(Self { bucket })
+        tracing::info!("MinIO client initialised, bucket: {}", BUCKET_NAME);
+        Ok(Self { client })
     }
 
-    /// Create the bucket if it does not exist.
+    /// Create the bucket if it does not already exist.
     pub async fn ensure_bucket(&self) -> Result<()> {
-        match self.bucket.exists().await {
-            Ok(true) => {
-                tracing::info!("Bucket '{}' already exists", BUCKET_NAME);
-            }
-            Ok(false) => {
-                self.bucket.create().await
-                    .context("Failed to create bucket")?;
-                tracing::info!("Bucket '{}' created", BUCKET_NAME);
-            }
-            Err(e) => {
-                // Non-fatal: log and continue — the server can still receive requests.
-                tracing::warn!("Could not check bucket existence: {}", e);
-            }
+        let exists = self.client
+            .bucket_exists(BUCKET_NAME)
+            .unwrap()
+            .build()
+            .send()
+            .await
+            .context("Failed to check bucket existence")?
+            .exists();
+
+        if exists {
+            tracing::info!("Bucket '{}' already exists", BUCKET_NAME);
+        } else {
+            self.client
+                .create_bucket(BUCKET_NAME)
+                .unwrap()
+                .build()
+                .send()
+                .await
+                .context("Failed to create bucket")?;
+            tracing::info!("Bucket '{}' created", BUCKET_NAME);
         }
+
         Ok(())
     }
 
-    /// Upload raw image bytes under the given key (the GUID filename).
+    /// Upload raw PNG bytes under the given key (the GUID filename).
     pub async fn put_image(&self, key: &str, data: Vec<u8>) -> Result<()> {
-        self.bucket
-            .put_object(key, &data)
+        let object_key = ObjectKey::new(key)
+            .with_context(|| format!("Invalid object key: {}", key))?;
+
+        let content = ObjectContent::from(data);
+
+        self.client
+            .put_object_content(BUCKET_NAME, object_key, content)
+            .with_context(|| format!("Failed to build put_object_content for '{}'", key))?
+            .build()
+            .send()
             .await
             .with_context(|| format!("Failed to upload image '{}'", key))?;
+
         tracing::debug!("Stored image: {}", key);
         Ok(())
     }
