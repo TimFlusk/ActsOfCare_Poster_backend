@@ -7,6 +7,10 @@ use minio::s3::types::{ObjectKey, S3Api};
 
 const BUCKET_NAME: &str = "tng-images";
 
+const POSTER_BUCKET: &str = "acts-of-care-posters";
+const POTRAIT_BUCKET: &str = "acts-of-care-portraits";
+
+
 pub struct MinioStorage {
     client: MinioClient,
 }
@@ -68,6 +72,42 @@ impl MinioStorage {
 
         self.client
             .put_object_content(BUCKET_NAME, object_key, content)
+            .with_context(|| format!("Failed to build put_object_content for '{}'", key))?
+            .build()
+            .send()
+            .await
+            .with_context(|| format!("Failed to upload image '{}'", key))?;
+
+        tracing::debug!("Stored image: {}", key);
+        Ok(())
+    }
+
+    pub async fn put_portrait(&self, key: &str, data: Vec<u8>) -> Result<()> {
+        let object_key = ObjectKey::new(key)
+            .with_context(|| format!("Invalid object key: {}", key))?;
+
+        let content = ObjectContent::from(data);
+
+        self.client
+            .put_object_content(POTRAIT_BUCKET, object_key, content)
+            .with_context(|| format!("Failed to build put_object_content for '{}'", key))?
+            .build()
+            .send()
+            .await
+            .with_context(|| format!("Failed to upload image '{}'", key))?;
+
+        tracing::debug!("Stored image: {}", key);
+        Ok(())
+    }
+
+    pub async fn put_poster(&self, key: &str, data: Vec<u8>) -> Result<()> {
+        let object_key = ObjectKey::new(key)
+            .with_context(|| format!("Invalid object key: {}", key))?;
+
+        let content = ObjectContent::from(data);
+
+        self.client
+            .put_object_content(POSTER_BUCKET, object_key, content)
             .with_context(|| format!("Failed to build put_object_content for '{}'", key))?
             .build()
             .send()

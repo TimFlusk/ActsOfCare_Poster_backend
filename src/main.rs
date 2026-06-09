@@ -34,6 +34,8 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/user", post(routes::upsert_user))
         .route("/image", post(routes::upload_image))
+        .route("/upload_portrait", post(routes::upload_portrait_image))
+        .route("/uplod_poster", post(routes::upload_poster_image))
         .with_state(state);
 
     let addr = "0.0.0.0:8080";
