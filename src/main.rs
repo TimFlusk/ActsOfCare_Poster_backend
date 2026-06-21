@@ -4,7 +4,7 @@ mod routes;
 mod models;
 
 use std::sync::Arc;
-use axum::{Router, routing::post};
+use axum::{Router, routing::{get, post}};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use db::Database;
@@ -33,10 +33,11 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/user", post(routes::upsert_user))
+        .route("/user/:file_name", get(routes::get_user))
+        .route("/users", get(routes::list_users))
         .route("/image", post(routes::upload_image))
         .route("/upload_portrait", post(routes::upload_portrait_image))
         .route("/upload_poster", post(routes::upload_poster_image))
-        .route("/users", get(routes::list_users))
         .with_state(state);
 
     let addr = "0.0.0.0:6767";

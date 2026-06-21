@@ -1,5 +1,5 @@
 use anyhow::Result;
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, OptionalExtension, params};
 use std::sync::Mutex;
 
 use crate::models::UserDetails;
@@ -47,18 +47,43 @@ impl Database {
         Ok(())
     }
 
-    // in your db module
-    pub fn get_user(&self, file_name: &str) -> rusqlite::Result<Option<UserDetails>> {
-        self.conn.query_row(
-            "SELECT * FROM users WHERE file_name = ?1",
-            [file_name],
-            |row| UserDetails::from_row(row), // or however you map rows currently
-        ).optional()
+    /// Fetch a single user by file_name.
+    pub fn get_user(&self, file_name: &str) -> Result<Option<UserDetails>> {
+        let conn = self.conn.lock().unwrap();
+        let user = conn.query_row(
+            "SELECT file_name, email, consent, save_location FROM users WHERE file_name = ?1",
+            params![file_name],
+            |row| {
+                Ok(UserDetails {
+                    file_name: row.get(0)?,
+                    email: row.get(1)?,
+                    consent: row.get::<_, i32>(2)? != 0,
+                    save_location: row.get(3)?,
+                })
+            },
+        ).optional()?;
+        Ok(user)
     }
 
-    pub fn get_all_users(&self) -> rusqlite::Result<Vec<UserDetails>> {
-        let mut stmt = self.conn.prepare("SELECT * FROM users")?;
-        let rows = stmt.query_map([], |row| UserDetails::from_row(row))?;
-        rows.collect()
+    /// Fetch all users.
+    pub fn get_all_users(&self) -> Result<Vec<UserDetails>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT file_name, email, consent, save_location FROM users"
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok(UserDetails {
+                file_name: row.get(0)?,
+                email: row.get(1)?,
+                consent: row.get::<_, i32>(2)? != 0,
+                save_location: row.get(3)?,
+            })
+        })?;
+
+        let mut users = Vec::new();
+        for user in rows {
+            users.push(user?);
+        }
+        Ok(users)
     }
 }

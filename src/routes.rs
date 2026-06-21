@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use axum::{
     Json,
-    extract::{Multipart, State},
+    extract::{Multipart, Path, State},
     http::StatusCode,
     response::IntoResponse,
 };
@@ -117,7 +117,6 @@ pub async fn upload_image(
         tracing::error!("MinIO error: {}", e);
         return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response();
     }
-    
 
     // Upsert user record alongside the image
     if let Err(e) = state.db.upsert_user(&user) {
@@ -129,11 +128,11 @@ pub async fn upload_image(
     (StatusCode::OK, "Image and user record stored").into_response()
 }
 
-pub async fn upload_poster_image(    
+pub async fn upload_poster_image(
     State(state): State<Arc<AppState>>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
-    
+
     let _bucket_name = "acts-of-care-posters";
 
     let mut metadata: Option<UserDetails> = None;
@@ -187,7 +186,6 @@ pub async fn upload_poster_image(
         tracing::error!("MinIO error: {}", e);
         return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response();
     }
-    
 
     // Upsert user record alongside the image
     if let Err(e) = state.db.upsert_user(&user) {
@@ -199,7 +197,7 @@ pub async fn upload_poster_image(
     (StatusCode::OK, "Image and user record stored").into_response()
 }
 
-pub async fn upload_portrait_image(    
+pub async fn upload_portrait_image(
     State(state): State<Arc<AppState>>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
