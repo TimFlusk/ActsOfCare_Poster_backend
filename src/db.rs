@@ -46,4 +46,19 @@ impl Database {
         tracing::debug!("Upserted user: {}", user.file_name);
         Ok(())
     }
+
+    // in your db module
+    pub fn get_user(&self, file_name: &str) -> rusqlite::Result<Option<UserDetails>> {
+        self.conn.query_row(
+            "SELECT * FROM users WHERE file_name = ?1",
+            [file_name],
+            |row| UserDetails::from_row(row), // or however you map rows currently
+        ).optional()
+    }
+
+    pub fn get_all_users(&self) -> rusqlite::Result<Vec<UserDetails>> {
+        let mut stmt = self.conn.prepare("SELECT * FROM users")?;
+        let rows = stmt.query_map([], |row| UserDetails::from_row(row))?;
+        rows.collect()
+    }
 }

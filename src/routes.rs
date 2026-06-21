@@ -26,6 +26,36 @@ pub async fn upsert_user(
     }
 }
 
+/// GET /user/:file_name
+/// Returns the UserDetails record for a given file_name (used as the GUID key elsewhere).
+pub async fn get_user(
+    State(state): State<Arc<AppState>>,
+    Path(file_name): Path<String>,
+) -> impl IntoResponse {
+    match state.db.get_user(&file_name) {
+        Ok(Some(user)) => (StatusCode::OK, Json(user)).into_response(),
+        Ok(None) => (StatusCode::NOT_FOUND, "User not found").into_response(),
+        Err(e) => {
+            tracing::error!("DB error fetching user {}: {}", file_name, e);
+            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+        }
+    }
+}
+
+/// GET /users
+/// Returns all UserDetails records.
+pub async fn list_users(
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    match state.db.get_all_users() {
+        Ok(users) => (StatusCode::OK, Json(users)).into_response(),
+        Err(e) => {
+            tracing::error!("DB error fetching all users: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+        }
+    }
+}
+
 /// POST /image
 /// Multipart form with two fields:
 ///   - "metadata": JSON-encoded UserDetails
@@ -104,7 +134,7 @@ pub async fn upload_poster_image(
     mut multipart: Multipart,
 ) -> impl IntoResponse {
     
-    let bucket_name = "acts-of-care-posters";
+    let _bucket_name = "acts-of-care-posters";
 
     let mut metadata: Option<UserDetails> = None;
     let mut image_bytes: Option<(String, Vec<u8>)> = None;
@@ -174,7 +204,7 @@ pub async fn upload_portrait_image(
     mut multipart: Multipart,
 ) -> impl IntoResponse {
 
-    let bucket_name = "acts-of-care-portraits";
+    let _bucket_name = "acts-of-care-portraits";
 
     let mut metadata: Option<UserDetails> = None;
     let mut image_bytes: Option<(String, Vec<u8>)> = None;

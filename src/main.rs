@@ -35,10 +35,11 @@ async fn main() -> anyhow::Result<()> {
         .route("/user", post(routes::upsert_user))
         .route("/image", post(routes::upload_image))
         .route("/upload_portrait", post(routes::upload_portrait_image))
-        .route("/uplod_poster", post(routes::upload_poster_image))
+        .route("/upload_poster", post(routes::upload_poster_image))
+        .route("/users", get(routes::list_users))
         .with_state(state);
 
-    let addr = "0.0.0.0:8080";
+    let addr = "0.0.0.0:6767";
     tracing::info!("Listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
